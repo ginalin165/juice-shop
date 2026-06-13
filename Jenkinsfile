@@ -6,22 +6,16 @@ pipeline {
                 git url: 'https://github.com/ginalin165/juice-shop.git', branch: 'master'
             }
         }
-        
-        stage('2. Đóng gói (Build)') {
-            steps {
-                echo 'Đang tải các thư viện Node.js và biên dịch mã nguồn...'
-                sleep 5 
-            }
-        }
-        
-        stage('3. Kiểm thử chức năng (Unit Test)') {
-            steps {
-                echo 'Đang chạy các kịch bản kiểm thử tự động...'
-                sleep 5 
-            }
-        }
 
-        stage('4. Quét tĩnh SAST (SonarQube)') {
+        stage('2. Quét thư viện bên thứ 3 (SCA)') {
+            steps {
+                echo 'Bắt đầu kiểm tra lỗ hổng CVE trong các thư viện Node.js...'
+                // Dùng Docker gọi Node.js ra để chạy npm audit độc lập, tránh lỗi môi trường Jenkins
+                sh 'docker run --rm -v ${PWD}:/app -w /app node:18 npm audit --audit-level=high || true'
+            }
+        }
+        
+        stage('3. Quét tĩnh mã nguồn (SAST - SonarQube)') {
             steps {
                 script {
                     def scannerHome = tool 'sonar-scanner'
@@ -36,18 +30,19 @@ pipeline {
             }
         }
         
-        stage('5. Triển khai (Deploy)') {
+        stage('4. Triển khai ứng dụng (Deploy)') {
             steps {
                 echo 'Khởi chạy ứng dụng lên môi trường kiểm thử (Cổng 3000)...'
                 sh 'docker restart juice-shop || true'
             }
         }
 
-        stage('6. Quét động DAST (OWASP ZAP)') {
+        stage('5. Quét động chủ động (DAST - ZAP Full Scan)') {
             steps {
-                echo 'Bắt đầu nã đạn (quét lỗ hổng runtime) vào Juice Shop...'
+                echo 'Thực hiện tấn công chủ động (Active Scan) vào Juice Shop...'
                 sh 'docker rm -f zap-scanner || true'
-                sh 'docker run -u root --name zap-scanner -v zap_temp:/zap/wrk -t zaproxy/zap-stable zap-baseline.py -t http://host.docker.internal:3000 -r zap_report.html || true'
+                // Thay zap-baseline.py thành zap-full-scan.py
+                sh 'docker run -u root --name zap-scanner -v zap_temp:/zap/wrk -t zaproxy/zap-stable zap-full-scan.py -t http://host.docker.internal:3000 -r zap_report.html || true'
                 sh 'docker cp zap-scanner:/zap/wrk/zap_report.html zap_report.html || true'
                 sh 'docker rm -f zap-scanner || true'
                 sh 'docker volume rm zap_temp || true'
