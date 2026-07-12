@@ -18,7 +18,7 @@ pipeline {
         stage('Unit Test & Code Coverage') {
             steps {
                 echo 'Bắt đầu chạy Unit Test để lấy dữ liệu Code Coverage...'
-                sh 'docker run --rm -v ${PWD}:/app -w /app markhobson/node-chrome:18 sh -c "npm install && npm test || true"'
+                sh 'docker run --rm -v ${PWD}:/app -w /app timbru31/node-chrome:18 sh -c "npm install && npm run test:coverage" || true'
             }
         }
         
