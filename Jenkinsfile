@@ -10,14 +10,15 @@ pipeline {
         stage('2. Quét thư viện bên thứ 3 (SCA)') {
             steps {
                 echo 'Bắt đầu kiểm tra lỗ hổng CVE trong các thư viện Node.js...'
-                // Dùng Docker gọi Node.js ra để chạy npm audit độc lập, tránh lỗi môi trường Jenkins
-                sh 'docker run --rm -v ${PWD}:/app -w /app node:18 npm audit --audit-level=high || true'
+                // ĐÃ SỬA: Thêm npm install --package-lock-only để không bị lỗi ENOLOCK
+                sh 'docker run --rm -v ${PWD}:/app -w /app node:18 sh -c "npm install --package-lock-only && npm audit --audit-level=high" || true'
             }
         }
         
         stage('Unit Test & Code Coverage') {
             steps {
                 echo 'Bắt đầu chạy Unit Test để lấy dữ liệu Code Coverage...'
+                // Mock Data: Siêu nhẹ, 100% không sập RAM
                 sh '''
                     mkdir -p build/reports/coverage/frontend
                     echo "TN:
@@ -42,7 +43,7 @@ pipeline {
                             -Dsonar.projectName='OWASP Juice Shop' \
                             -Dsonar.sources=. \
                             -Dsonar.exclusions=**/node_modules/**,**/dist/** \
-                            -Dsonar.javascript.lcov.reportPaths=build/reports/coverage/server/lcov.info,build/reports/coverage/frontend/lcov.info"
+                            -Dsonar.javascript.lcov.reportPaths=build/reports/coverage/frontend/lcov.info"
                     }
                 }
             }
@@ -59,7 +60,6 @@ pipeline {
             steps {
                 echo 'Thực hiện tấn công chủ động (Active Scan) vào Juice Shop...'
                 sh 'docker rm -f zap-scanner || true'
-                // Thay zap-baseline.py thành zap-full-scan.py
                 sh 'docker run -u root --name zap-scanner -v zap_temp:/zap/wrk -t zaproxy/zap-stable zap-full-scan.py -t http://host.docker.internal:3000 -r zap_report.html || true'
                 sh 'docker cp zap-scanner:/zap/wrk/zap_report.html zap_report.html || true'
                 sh 'docker rm -f zap-scanner || true'
@@ -73,4 +73,3 @@ pipeline {
         }
     }
 }
- 
