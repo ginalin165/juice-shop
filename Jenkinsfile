@@ -18,7 +18,7 @@ pipeline {
         stage('Unit Test & Code Coverage') {
             steps {
                 echo 'Bắt đầu chạy Unit Test để lấy dữ liệu Code Coverage...'
-                sh 'docker run --rm -v /var/jenkins_home/workspace/test:/app -w /app node:18 sh -c "npm install && npm test || true"'
+                sh 'docker run --rm -v ${PWD}:/app -w /app markhobson/node-chrome:18 sh -c "npm install && npm test || true"'
             }
         }
         
@@ -32,7 +32,7 @@ pipeline {
                             -Dsonar.projectName='OWASP Juice Shop' \
                             -Dsonar.sources=. \
                             -Dsonar.exclusions=**/node_modules/**,**/dist/** \
-                            -Dsonar.javascript.lcov.reportPaths=build/reports/coverage/frontend/lcov.info" 
+                            -Dsonar.javascript.lcov.reportPaths=build/reports/coverage/server/lcov.info,build/reports/coverage/frontend/lcov.info"
                     }
                 }
             }
